@@ -1,0 +1,51 @@
+version: '3'
+
+volumes:
+  pg_data:
+  static:
+  redis:
+    driver: local
+
+services:
+  db:
+    image: postgres:13.10
+    env_file: ../.env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis
+    command: redis-server
+    expose:
+      - '6379'
+    ports:
+     - 6379:6379
+    volumes:
+      - redis:/data
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ../backend/
+      dockerfile: Dockerfile
+    env_file: ../.env
+    volumes:
+      - static:/app/backend_static
+    depends_on:
+      - db
+    restart: always
+
+  nginx:
+    image: nginx:1.19.3
+    depends_on:
+      - backend
+      - redis
+    ports:
+      - 8080:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - static:/staticfiles/
+    restart: always
